@@ -22,14 +22,14 @@ class LoadBalancerTopo(Topo):
     Load Balancer Custom Topology containing 3 slave nodes and 1 switch
     """
 
-    internalGateway = "10.0.0.1"
+    internalGateway = "192.168.1.1"
     externalGateway = "128.128.128.1"
 
-    ip_h1 = "10.0.0.11/24"
-    ip_h2 = "10.0.0.12/24"
-    ip_h3 = "10.0.0.13/24"
+    ip_h1 = "192.168.1.11/24"
+    ip_h2 = "192.168.1.12/24"
+    ip_h3 = "192.168.1.13/24"
 
-    ip_ext = "128.128.128.10"
+    ip_ext = "128.128.128.11"
 
     def __init__(self):
         # Initialize topology

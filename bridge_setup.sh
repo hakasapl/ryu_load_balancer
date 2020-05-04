@@ -17,7 +17,7 @@ ovs-vsctl add-port OVS2 s1-eth1
 
 #Assign IP addresses to the interfaces of the respective bridges
 ifconfig OVS1 128.128.128.1/24 up
-ifconfig OVS2 10.0.0.1/24 up
+ifconfig OVS2 192.168.1.1/24 up
 
 #Delete any previous flows
 ovs-ofctl del-flows OVS1
