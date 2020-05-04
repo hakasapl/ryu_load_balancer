@@ -2,5 +2,5 @@
 
 # Delete remaining bridges
 
-ovs-vsctl del-br OVS1
-ovs-vsctl del-br OVS2
+ovs-vsctl --if-exists del-br OVS1
+ovs-vsctl --if-exists del-br OVS2

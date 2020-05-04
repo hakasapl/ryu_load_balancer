@@ -28,9 +28,9 @@ class LoadBalancerTopo(Topo):
     ip_h2 = "192.168.1.12/24"
     ip_h3 = "192.168.1.13/24"
 
-    ip_c1 = "128.128.128.11"
-    ip_c2 = "128.128.128.12"
-    ip_c3 = "128.128.128.13"
+    ip_c1 = "128.128.128.11/24"
+    ip_c2 = "128.128.128.12/24"
+    ip_c3 = "128.128.128.13/24"
 
     def __init__(self):
         # Initialize topology
@@ -66,7 +66,7 @@ stream = os.popen('./bridge_setup.sh')
 print(stream.read())
 
 # Add Default Routes for all the nodes
-h1, h2, h3, c1, c2, c3 = net.get('h1', 'h2', 'h3', 'ext')
+h1, h2, h3, c1, c2, c3 = net.get('h1', 'h2', 'h3', 'c1', 'c2', 'c3')
 h1.cmd("ip route add default via " + LoadBalancerTopo.internalGateway)
 h2.cmd("ip route add default via " + LoadBalancerTopo.internalGateway)
 h3.cmd("ip route add default via " + LoadBalancerTopo.internalGateway)

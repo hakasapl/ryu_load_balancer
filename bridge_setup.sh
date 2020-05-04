@@ -1,19 +1,26 @@
 #!/bin/bash
 
+#
+# This script will only work for the topology it was specifically designed for
+#
+
 #Miniet creates a bridge by default using the switch name.
 #So we delete and re-create our own bridges in the next step   
-ovs-vsctl del-br s1
+ovs-vsctl --if-exists del-br s1
 
 #Create bridge OVS1 
 ovs-vsctl add-br OVS1
 #Associate interface s1-eth2(server) to OVS1 
-ovs-vsctl add-port OVS1 s1-eth2 
-
+ovs-vsctl add-port OVS1 s1-eth4
+ovs-vsctl add-port OVS1 s1-eth5
+ovs-vsctl add-port OVS1 s1-eth6
 
 #Create bridge OVS2
 ovs-vsctl add-br OVS2
 #Associate interface s1-eth1(client) to OVS2
 ovs-vsctl add-port OVS2 s1-eth1
+ovs-vsctl add-port OVS2 s1-eth2
+ovs-vsctl add-port OVS2 s1-eth3
 
 #Assign IP addresses to the interfaces of the respective bridges
 ifconfig OVS1 128.128.128.1/24 up
