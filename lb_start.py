@@ -18,7 +18,7 @@ import os
 
 class LoadBalancerTopo(Topo):
     """
-    Load Balancer Custom Topology containing 3 slave nodes and 1 switch
+    Load Balancer Custom Topology containing 3 slave nodes, 1 switch, and 3 clients
     """
 
     internalGateway = "192.168.1.1"
@@ -59,7 +59,6 @@ class LoadBalancerTopo(Topo):
 topo = LoadBalancerTopo()
 net = Mininet(topo=topo, controller=RemoteController)
 net.start()
-dumpNodeConnections(net.hosts)
 
 # Create Bridge Interfaces
 stream = os.popen('./bridge_setup.sh')
@@ -73,6 +72,8 @@ h3.cmd("ip route add default via " + LoadBalancerTopo.internalGateway)
 c1.cmd("ip route add default via " + LoadBalancerTopo.externalGateway)
 c2.cmd("ip route add default via " + LoadBalancerTopo.externalGateway)
 c3.cmd("ip route add default via " + LoadBalancerTopo.externalGateway)
+
+dumpNodeConnections(net.hosts)
 
 CLI(net)  # hang here until user closes the CLI
 

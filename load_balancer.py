@@ -26,15 +26,18 @@ class NAT(app_manager.RyuApp):
     # map for internal IP and internal port
     ip_map = namedtuple("ip_map", ["addr", "port"])
 
+    global EX_IP
     EX_IP = "128.128.129.1"
+
+    global SLAVES
     SLAVES = ["192.168.1.11", "192.168.1.12", "192.168.1.13"]
 
     def __init__(self, *args, **kwargs):
         self.tcp_maps = {}
         self.udp_maps = {}
 
-        self.tcp_ports = range(50000, 60000)
-        self.udp_ports = range(50000, 60000)
+        self.tcp_ports = list(range(50000, 60000))
+        self.udp_ports = list(range(50000, 60000))
 
         super(NAT, self).__init__(*args, **kwargs)
 
@@ -108,27 +111,36 @@ class NAT(app_manager.RyuApp):
         ip = pkt.get_protocol(ipv4.ipv4)
         # self.logger.info("ipv4 %s", ip)
 
-        # TODO not using these yet
         bitmask = "24"
-        src_match = IPNetwork("192.168.1.0/" + bitmask)
+        src_match = IPNetwork("192.168.1.0" + "/" + bitmask)
         dst_match = EX_IP
 
-        if ip.proto == 6:
-            # TCP Packet
-            tu = pkt.get_protocol(tcp.tcp)
-        elif ip.proto == 17:
-            # UDP Packet
-            tu = pkt.get_protocol(udp.udp)
+        tcpInfo = pkt.get_protocol(tcp.tcp)
 
-        if ip.dst == dst_match:
+        if IPNetwork(ip.src + "/" + bitmask) == src_match:
+            # Destination is the outside from one of the slave nodes
+
+            actions = [
+                parser.OFPActionSetNwSrc(self.ipv4_to_int(EX_IP)),
+                parser.OFPActionOutput(1)
+            ]
+
+            self.logger.info("Recieved packet from slave node " +
+                             str(ip.src) + ", changing source to " + EX_IP)
+
+            out = parser.OFPPacketOut(datapath=datapath, buffer_id=message.buffer_id,
+                                      data=message.data, in_port=message.in_port, actions=actions)
+
+            datapath.send_msg(out)
+        elif ip.dst == dst_match:
             # Destination is the load balancer (this)
 
-            dest_port = tu.dst_port
-            if dest_port in self.tcp_maps:
-                slave_ip = self.tcp_maps[dest_port]
+            entry = ip_map(ip.src, tcpInfo.src_port)
+            if entry in self.tcp_maps:
+                slave_ip = self.tcp_maps[entry]
             else:
                 slave_ip = random.choice(SLAVES)
-                self.tcp_maps[dest_port] = slave_ip  # add entry for next time
+                self.tcp_maps[entry] = slave_ip  # add entry for next time
 
             actions = [
                 # Randomly choose one of the slave nodes
@@ -138,30 +150,11 @@ class NAT(app_manager.RyuApp):
 
             self.logger.info(
                 "Recieved packet into the load balancer, sending to " + slave_ip)
-        elif IPNetwork(ip.src + "/" + bitmask) == src_match:
-            # Destination is the outside from one of the slave nodes
 
-            entry = ip_map(ip.src, tu.src_port)  # key value
-            if entry in self.tcp_maps:
-                # Entry already exists in the NAT table
-                outPort = self.tcp_maps[entry]
-            else:
-                # No entry in table, get a new port
-                outPort = self.tcp_ports.pop()
-                self.tcp_maps[entry] = outPort  # add entry for next time
+            out = parser.OFPPacketOut(datapath=datapath, buffer_id=message.buffer_id,
+                                      data=message.data, in_port=message.in_port, actions=actions)
 
-            actions = [
-                parser.OFPActionSetNwSrc(self.ipv4_to_int(EX_IP)),
-                parser.OFPActionSetTpSrc(outPort),
-                parser.OFPActionOutput(1)
-            ]
-
-            self.logger.info("Recieved packet from slave node, changing source to " +
-                             EX_IP + " and port to " + str(outPort))
-
-        out = parser.OFPPacketOut(datapath=datapath, buffer_id=message.buffer_id,
-                                  data=message.data, in_port=message.in_port, actions=actions)
-        datapath.send_msg(out)
+            datapath.send_msg(out)
 
     def ipv4_to_str(self, integre):
         ip_list = [str((integre >> (24 - (n * 8)) & 255)) for n in range(4)]
