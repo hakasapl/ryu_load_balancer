@@ -16,7 +16,6 @@ from mininet.util import dumpNodeConnections
 from mininet.cli import CLI
 import os
 
-
 class LoadBalancerTopo(Topo):
     """
     Load Balancer Custom Topology containing 3 slave nodes and 1 switch
@@ -29,7 +28,9 @@ class LoadBalancerTopo(Topo):
     ip_h2 = "192.168.1.12/24"
     ip_h3 = "192.168.1.13/24"
 
-    ip_ext = "128.128.128.11"
+    ip_c1 = "128.128.128.11"
+    ip_c2 = "128.128.128.12"
+    ip_c3 = "128.128.128.13"
 
     def __init__(self):
         # Initialize topology
@@ -39,15 +40,21 @@ class LoadBalancerTopo(Topo):
         h1 = self.addHost('h1', ip=self.ip_h1)
         h2 = self.addHost('h2', ip=self.ip_h2)
         h3 = self.addHost('h3', ip=self.ip_h3)
+
+        c1 = self.addHost('c1', ip=self.ip_c1)
+        c2 = self.addHost('c2', ip=self.ip_c2)
+        c3 = self.addHost('c3', ip=self.ip_c3)
+
         s1 = self.addSwitch('s1')
-
-        ext = self.addHost('ext', ip=self.ip_ext)
-
+        
         # Add links
         self.addLink(h1, s1)
         self.addLink(h2, s1)
         self.addLink(h3, s1)
-        self.addLink(ext, s1)
+
+        self.addLink(c1, s1)
+        self.addLink(c2, s1)
+        self.addLink(c3, s1)
 
 topo = LoadBalancerTopo()
 net = Mininet(topo=topo, controller=RemoteController)
@@ -59,14 +66,18 @@ stream = os.popen('./bridge_setup.sh')
 print(stream.read())
 
 # Add Default Routes for all the nodes
-h1, h2, h3, ext = net.get('h1', 'h2', 'h3', 'ext')
+h1, h2, h3, c1, c2, c3 = net.get('h1', 'h2', 'h3', 'ext')
 h1.cmd("ip route add default via " + LoadBalancerTopo.internalGateway)
 h2.cmd("ip route add default via " + LoadBalancerTopo.internalGateway)
 h3.cmd("ip route add default via " + LoadBalancerTopo.internalGateway)
-ext.cmd("ip route add default via " + LoadBalancerTopo.externalGateway)
+c1.cmd("ip route add default via " + LoadBalancerTopo.externalGateway)
+c2.cmd("ip route add default via " + LoadBalancerTopo.externalGateway)
+c3.cmd("ip route add default via " + LoadBalancerTopo.externalGateway)
 
-CLI(net)
+CLI(net)  # hang here until user closes the CLI
 
 # Destroy the bridges once its done
 stream = os.popen('./bridge_destroy.sh')
 print(stream.read())
+
+net.stop()  # stop mininet
