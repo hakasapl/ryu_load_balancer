@@ -11,8 +11,6 @@ ovs-vsctl --if-exists del-br s1
 #Create bridge OVS1 (Client Bridge - Public Internet)
 ovs-vsctl add-br OVS1
 ovs-vsctl add-port OVS1 s1-eth4
-ovs-vsctl add-port OVS1 s1-eth5
-ovs-vsctl add-port OVS1 s1-eth6
 
 #Create bridge OVS2 (Private Bridge - Load Balancer Net)
 ovs-vsctl add-br OVS2

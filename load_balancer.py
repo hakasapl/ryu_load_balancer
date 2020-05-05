@@ -20,7 +20,7 @@ from netaddr import *
 from collections import namedtuple
 
 
-class NAT(app_manager.RyuApp):
+class LoadBalancer(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_0.OFP_VERSION]
     global ip_map
     # map for internal IP and internal port
@@ -33,13 +33,12 @@ class NAT(app_manager.RyuApp):
     SLAVES = ["192.168.1.11", "192.168.1.12", "192.168.1.13"]
 
     def __init__(self, *args, **kwargs):
-        self.tcp_maps = {}
-        self.udp_maps = {}
+        self.maps = {}
 
-        self.tcp_ports = list(range(50000, 60000))
-        self.udp_ports = list(range(50000, 60000))
+        # Set this var to -1 if you want to use random choice algorithm over round robin
+        self.last_slave = 0
 
-        super(NAT, self).__init__(*args, **kwargs)
+        super(LoadBalancer, self).__init__(*args, **kwargs)
 
     def add_flow(self, datapath, match, actions, priority=0, hard_timeout=0):
         ofproto = datapath.ofproto
@@ -98,24 +97,24 @@ class NAT(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def _packet_in_handler(self, ev):
-        # self.logger.info("msg in")
+        # self.logger.info("Packet in")  # DEBUG
 
         message = ev.msg
-        # self.logger.info("message %s", message)
+        # self.logger.info("message %s", message)  # DEBUG
         datapath = message.datapath
         ofproto = datapath.ofproto
         parser = datapath.ofproto_parser
 
         pkt = packet.Packet(message.data)
-        # self.logger.info("pkt %s", pkt)
+        # self.logger.info("pkt %s", pkt)  # DEBUG
         ip = pkt.get_protocol(ipv4.ipv4)
-        # self.logger.info("ipv4 %s", ip)
+        # self.logger.info("ipv4 %s", ip)  # DEBUG
 
         bitmask = "24"
         src_match = IPNetwork("192.168.1.0" + "/" + bitmask)
         dst_match = EX_IP
 
-        tcpInfo = pkt.get_protocol(tcp.tcp)
+        pktInfo = pkt.get_protocol(tcp.tcp)
 
         if IPNetwork(ip.src + "/" + bitmask) == src_match:
             # Destination is the outside from one of the slave nodes
@@ -135,12 +134,28 @@ class NAT(app_manager.RyuApp):
         elif ip.dst == dst_match:
             # Destination is the load balancer (this)
 
-            entry = ip_map(ip.src, tcpInfo.src_port)
-            if entry in self.tcp_maps:
-                slave_ip = self.tcp_maps[entry]
+            entry = ip_map(ip.src, pktInfo.src_port)
+
+            if pktInfo.has_flags(tcp.TCP_SYN):
+                # new session
+                if self.last_slave < 0:
+                    slave_ip = random.choice(SLAVES)  # Random choice
+                else:
+                    # round robin
+                    nextIndex = self.last_slave + 1
+                    if nextIndex >= len(SLAVES):
+                        nextIndex = 0
+
+                    slave_ip = SLAVES[nextIndex]
+                    self.last_slave = nextIndex
+
+                self.maps[entry] = slave_ip  # add entry for next time
             else:
-                slave_ip = random.choice(SLAVES)
-                self.tcp_maps[entry] = slave_ip  # add entry for next time
+                if entry in self.maps:
+                    slave_ip = self.maps[entry]
+                else:
+                    # discard packet
+                    return
 
             actions = [
                 # Randomly choose one of the slave nodes
