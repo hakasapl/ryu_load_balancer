@@ -34,5 +34,4 @@ ovs-vsctl set-controller OVS1 tcp:127.0.0.1:6653
 #The following steps ensures connectivity between OVS1 and OVS2.
 #Default routes are set on OVS2 and OVS1 is used to connect to the RYU SDN Controller.
 #The NAT functionality is implemented on Controller. 
-#ovs-ofctl add-flow OVS2 in_port=any,actions=LOCAL
 ovs-ofctl add-flow OVS2 actions=all,in_port
