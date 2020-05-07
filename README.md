@@ -1,6 +1,8 @@
 # RYU Load Balancer Controller
 OpenFlow SDN Load Balancer using the RYU controller
 
+Git repo at https://github.com/hakasapl/ryu_load_balancer
+
 ### Software Requirements
 * OpenvSwitch version 2.9.5
 * RYU version 4.15
